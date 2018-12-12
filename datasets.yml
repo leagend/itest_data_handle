@@ -1,0 +1,88 @@
+datasets:
+  MX4:
+    starttime_first:
+      original: [1, 2, 3, 4, 5]
+      integrated: [1, 2, 3, 4, 5]
+    starttime_second:
+      original: [1, 2, 3, 4, 5]
+      integrated: [1, 2, 3, 4, 5]
+    polling_10min:
+      original: [1, 2, 3, 4, 5]
+      integrated: [1, 2, 3, 4, 5]
+    polling_1hour:
+      original: [1, 2, 3]
+      integrated: [1, 2, 3]
+  N9100:
+    starttime_first:
+      original: [1, 2, 3, 4, 5]
+      integrated: [1, 2, 3, 4, 5]
+    starttime_second:
+      original: [1, 2, 3, 4, 5]
+      integrated: [1, 2, 3, 4, 5]
+    polling_10min:
+      original: [1, 2, 3, 4, 5]
+      integrated: [1, 2, 3, 4, 5]
+    polling_1hour:
+      original: [1, 2, 3]
+      integrated: [1, 2, 3]
+  HUAWEI:
+    starttime_first:
+      original: [1, 2, 3, 4, 5]
+      integrated: [1, 2, 3, 4, 5]
+    starttime_second:
+      original: [1, 2, 3, 4, 5]
+      integrated: [1, 2, 3, 4, 5]
+    polling_10min:
+      original: [1, 2, 3, 4, 5]
+      integrated: [1, 2, 3, 4, 5]
+    polling_1hour:
+      original: [1, 2, 3]
+      integrated: [1, 2, 3]
+duration:
+  starttime_first: 120
+  starttime_second: 119
+  polling_10min: 390
+  polling_1hour: 3405
+counters:
+  - totalcpu
+  - totalpss
+  - totalupflow
+  - totaldownflow
+model_sequence:
+  - N9100
+  - HUAWEI
+  - MX4
+execution_info:
+  header_text: 'time,sysmemleft,syscpu,totalpss,totalcpu,totalupflow,totaldownflow,totalbattery,batterleft,cputemp,fps'
+  package_name: 'com.sgcc.evs.echarge'
+  activity_name: 'com.bitrice.evclub.ui.activity.WelcomeActivity'
+  app_label: E充电
+test_types:
+  - original
+  - integrated
+phases:
+  - 1st_min
+  - rest
+  - whole
+radar_schema:
+  totalcpu: 40
+  totalpss: 200
+  totalupflow: 2000
+  totaldownflow: 5000
+  starttime: 10
+translations:
+  1st_min: 第一分钟
+  rest: 一分钟后
+  whole: 全过程
+  totalcpu: CPU利用率(%)
+  totalpss: PSS内存使用值(MB)
+  totalupflow: 上行流量(KB)
+  totaldownflow: 下行流量(KB)
+  starttime: 启动时间(s)
+  launch: 启动时间
+  starttime_first: 首次启动
+  starttime_second: 再次启动
+  polling_10min: 静置10分钟
+  polling_1hour: 灭屏1小时
+  original: 未集成SDK
+  integrated: 集成SDK

@@ -1,38 +1,17 @@
 # -*- coding: utf-8 -*-
 
-import pandas as pd
-from numpy import *
-import numpy as np
-from pyecharts import Line, Page, Radar, Bar, configure, Pie
+import abc
 import os
-import re
+import numpy as np
 import yaml
+from numpy import *
+from pyecharts import Page, Radar, Bar, Pie, Line
 
-STARTTIME = 'starttime'
+
+STARTTIME = 'launchtime'
+REPORTS_DIR = 'reports'
 MODEL_SEQUENCE = 'model_sequence'
 COUNTERS = 'counters'
-DATASETS_YML = 'datasets.yml'
-REPORTS_DIR = 'reports'
-configure(global_theme='roma')
-
-
-def read_csv(header_text, filename):
-    headers = header_text.split(',')
-    df = pd.DataFrame(pd.read_csv(filename, header=-1))
-    df.columns = headers
-    df = df[df['totalcpu'] >= 0]
-    df['totalupflow'] = df['totalupflow'] - df['totalupflow'].min()
-    df['totaldownflow'] = df['totaldownflow'] - df['totaldownflow'].min()
-    return df
-
-
-def read_csv_files(header_text, folders_list):
-    dfs_list = []
-    for folder in folders_list:
-        _df = read_csv(header_text, os.path.join(folder, 'uploadTotalToServer.txt'))
-        # print(_df.iloc[:, 0].size)
-        dfs_list.append(_df)
-    return dfs_list
 
 
 def get_iterations_mean(counter_name, dfs_list, start=0, end=-1):
@@ -49,39 +28,35 @@ def get_folders(folder_nums, scenario, test_type, base_path='.'):
     selected_folders = []
     for item in folder_nums:
         item = os.path.join(base_path, test_type, scenario, str(item))
+        # print(item)
         if os.path.exists(item):
             selected_folders.append(item)
+        elif os.path.exists("{0}.csv".format(item)):
+            selected_folders.append(item)
     if len(selected_folders) == 0:
-        # print(u'没有找到合适数据集目录')
-        # exit(1)
+        print(u'没有找到合适数据集目录')
+        exit(1)
         pass
     return selected_folders
-
-
-def read_time_from_logcat(folder, package_name, activity_name):
-    time = 0.0
-    for item in os.listdir(folder):
-        if not item.endswith('launch.log'):
-            continue
-        with open(os.path.join(folder, item)) as file:
-            lines = file.readlines()
-            _pattern = 'Displayed {0}/{1}:\s+\+(\S+)ms'.format(package_name, activity_name)
-            for line in lines:
-                groups = re.search(_pattern, line)
-                if groups:
-                    time_str = groups.group(1)
-                    group2s = re.search('(\d+)s(\d+)', time_str)
-                    if group2s:
-                        time = int(group2s.group(1)) + long(group2s.group(2)) / 1000.0
-                        # print(time)
-                        # break
-    return round(time, 2)
 
 
 def draw_line_graph(title, x, y0, y1, width=1200, height=600):
     global line
     line = Line(title, title_pos='center', width=width, height=height)
     # line.use_theme('roma')
+
+    # print(y.tolist())
+    line.add(
+        u"未集成SDK",
+        x,
+        y0.tolist(),
+        is_fill=True,
+        area_opacity=0.3,
+        legend_top='bottom',
+        mark_point=['max'],
+        mark_line=['average'],
+        is_smooth=True
+    )
     line.add(
         u"集成SDK",
         x,
@@ -96,26 +71,7 @@ def draw_line_graph(title, x, y0, y1, width=1200, height=600):
         mark_point=['max'],
         mark_line=['average'],
     )
-    # print(y.tolist())
-    line.add(
-        u"未集成SDK",
-        x,
-        y0.tolist(),
-        is_fill=True,
-        area_opacity=0.3,
-        legend_top='bottom',
-        mark_point=['max'],
-        mark_line=['average'],
-        is_smooth=True
-    )
     return line
-
-
-def get_launch_time(folders, package_name, activity_name):
-    starttimes = []
-    for _folder in folders:
-        starttimes.append(read_time_from_logcat(_folder, package_name, activity_name))
-    return starttimes
 
 
 def page_render(page, filename):
@@ -130,7 +86,8 @@ def collect_duration_mean(collect_values, model, scenario, test_type, duration_t
 
 
 class DataAnalyzer(object):
-    def __init__(self, config_file=DATASETS_YML):
+    def __init__(self, config_file):
+        self.starttimes = {}
         self.datasets_map = yaml.load(open(config_file))
         self.summary_values = {}
         if not os.path.isdir(REPORTS_DIR):
@@ -164,10 +121,20 @@ class DataAnalyzer(object):
         return self.datasets_map.get('translations')
 
     def translate(self, item):
-        return self._get_translations().get(item)
+        translations = self._get_translations()
+        if item in translations:
+            item = translations.get(item)
+        return item
 
     def get_models(self):
         return self.datasets_map[MODEL_SEQUENCE]
+
+    def get_matched_models(self):
+        models = self.get_models()
+        _models = []
+        for model in models:
+            _models.append(self.translate(model))
+        return _models
 
     def get_summary_values(self):
         return self.summary_values
@@ -187,10 +154,9 @@ class DataAnalyzer(object):
     def get_radar_schema(self, counter):
         return self.datasets_map.get('radar_schema').get(counter)
 
+    @abc.abstractmethod
     def extract_dataset_from_raw_files(self, original_folders):
-        # 获取数据集
-        original_datasets = read_csv_files(self.get_header_text(), original_folders)
-        return original_datasets
+        pass
 
     def get_data_paths(self, model, scenario, test_type):
         scenarioes_map = self.get_model_datasets(model)
@@ -212,6 +178,7 @@ class DataAnalyzer(object):
 class AppPerfDrawer(object):
     def __init__(self, analyzer):
         self.analyzer = analyzer
+        self.matched_models = self.analyzer.get_matched_models()
         pass
 
     def draw_lines_per_models(self):
@@ -242,10 +209,11 @@ class AppPerfDrawer(object):
                 duration = self.analyzer.get_scenario_duration(scenario)
                 y = get_iterations_mean(counter, original_datasets, 0, duration)
                 yy = get_iterations_mean(counter, integrated_datasets, 0, duration)
+
                 x = range(0, len(y))
 
                 # 绘制指定设备，指定场景，指定性能指标的折线图
-                line = draw_line_graph(u"APP运行时-%s" % self.analyzer.translate(counter), x, y, yy)
+                line = draw_line_graph(u"%s运行时-%s" % (self.analyzer.translate(model), self.analyzer.translate(counter)), x, y, yy)
                 page.add_chart(line)
 
                 # 将性能指标均值汇总
@@ -278,9 +246,9 @@ class AppPerfDrawer(object):
             counter_txt = self.analyzer.translate(STARTTIME)
             schema.append((counter_txt, self.analyzer.get_radar_schema(STARTTIME)))
             # 获取启动时间时间
-            original_launch = np.array(get_launch_time(original_folders, self.analyzer.get_package_name(),
+            original_launch = np.array(self.analyzer.get_launch_time(original_folders, self.analyzer.get_package_name(),
                                                        self.analyzer.get_activity_name()))
-            integrated_launch = np.array(get_launch_time(integrated_folders, self.analyzer.get_package_name(),
+            integrated_launch = np.array(self.analyzer.get_launch_time(integrated_folders, self.analyzer.get_package_name(),
                                                          self.analyzer.get_activity_name()))
             # 计算启动均值并汇总
             original_means.append(original_launch.mean())
@@ -296,10 +264,11 @@ class AppPerfDrawer(object):
         radar = Radar(title, title_pos='center')
         # radar.use_theme('roma')
         radar.config(schema)
-        radar.add(self.analyzer.translate(self.analyzer.get_test_type(1)), v1, legend_top='bottom',
-                  is_area_show=False)
+
         radar.add(self.analyzer.translate(self.analyzer.get_test_type(0)), v0, legend_top='bottom',
-                  item_color="#4e79a7", is_splitline=True, is_axisline_show=True, is_more_utils=False)
+                  is_splitline=True, is_axisline_show=True, is_more_utils=False)
+        radar.add(self.analyzer.translate(self.analyzer.get_test_type(1)), v1, legend_top='bottom',
+                  item_color="#4e79a7", is_area_show=False)
         return radar
 
     def draw_summary_bars_per_scenarioes(self):
@@ -315,7 +284,10 @@ class AppPerfDrawer(object):
                 ratio = 0.5
             else:
                 ratio = 1
-            bar = Bar(u'%s-%s' % (self.analyzer.translate(scenario), self.analyzer.translate(counter)),
+            counter_name = self.analyzer.translate(counter)
+            if counter.endswith('flow'):
+                counter_name = counter_name.replace('B', 'B/s')
+            bar = Bar(u'%s-%s' % (self.analyzer.translate(scenario), counter_name),
                       title_pos='center', width=1200 * ratio, height=600 * ratio)
             _summary_map = {}
             for model in self.analyzer.get_models():
@@ -334,29 +306,45 @@ class AppPerfDrawer(object):
                             if test_type not in _summary_map:
                                 _summary_map[test_type] = []
                             _summary_map[test_type].append(self.analyzer.summary_values[summary_title][counter])
-                            y_axis = u"%s-%s" % (model, self.analyzer.translate(subfix))
+                            y_axis = u"%s-%s" % (self.analyzer.translate(model), self.analyzer.translate(subfix))
                             if y_axis not in attr:
                                 attr.append(y_axis)
-            for test_type in _summary_map:
+            for test_type in self.analyzer.get_test_types():
                 bar.add(self.analyzer.translate(test_type), attr, _summary_map[test_type], legend_top='bottom',
                         is_label_show=True)
+                # bar.add(self.analyzer.translate(test_type), attr, _summary_map[test_type], legend_top='bottom',
+                #         is_label_show=True, is_datazoom_show=True)
             page.add_chart(bar)
         page_render(page, os.path.join(REPORTS_DIR, "summary_{0}.html".format(scenario)))
 
     def draw_silent_power_usage_bar(self, v1, v2, v3):
         bar = Bar(u"各静态场景下手机功耗(J)", title_pos='center', width=1200, height=600)
-        bar.add(u"未安装", self.analyzer.get_models(), v1, legend_top='bottom', is_label_show=True)
-        bar.add(u"安装未集成SDK包", self.analyzer.get_models(), v2, legend_top='bottom', is_label_show=True)
-        bar.add(u"安装集成SDK包", self.analyzer.get_models(), v3, legend_top='bottom', is_label_show=True)
+        bar.add(u"未安装", self.matched_models, v1, legend_top='bottom', is_label_show=True)
+        # bar.add(u"未安装", self.analyzer.get_models(), v1, legend_top='bottom', is_label_show=True, is_datazoom_show=True)
+        bar.add(u"安装未集成SDK包", self.matched_models, v2, legend_top='bottom', is_label_show=True)
+        bar.add(u"安装集成SDK包", self.matched_models, v3, legend_top='bottom', is_label_show=True)
         bar.render(os.path.join(REPORTS_DIR, 'silent_power_usage.html'))
 
     def draw_active_power_usage_bar(self, v1, v2, v3, v4):
+
         bar = Bar(u"运行App时的手机功耗(J)", title_pos='center', width=800, height=450)
-        bar.add(u"未集成SDK时总功耗", self.analyzer.get_models(), v1, legend_top='bottom', is_label_show=True)
-        bar.add(u"集成SDK时总功耗", self.analyzer.get_models(), v2, legend_top='bottom', is_label_show=True)
-        bar.add(u"未集成SDK的APP功耗", self.analyzer.get_models(), v3, legend_top='bottom', is_label_show=True)
-        bar.add(u"集成SDK的APP功耗", self.analyzer.get_models(), v4, legend_top='bottom', is_label_show=True)
+        bar.add(u"未集成SDK时总功耗", self.analyzer.self.matched_models, v1, legend_top='bottom', is_label_show=True)
+        # bar.add(u"未集成SDK时总功耗", self.analyzer.get_models(), v1, legend_top='bottom', is_label_show=True, is_datazoom_show=True)
+        bar.add(u"集成SDK时总功耗", self.matched_models, v2, legend_top='bottom', is_label_show=True)
+        bar.add(u"未集成SDK的APP功耗", self.matched_models, v3, legend_top='bottom', is_label_show=True)
+        bar.add(u"集成SDK的APP功耗", self.matched_models, v4, legend_top='bottom', is_label_show=True)
         bar.render(os.path.join(REPORTS_DIR, 'active_power_usage.html'))
+
+    def draw_occupation_bar(self, v1, v2, v3, v4):
+        # print(len(v1), len(v2),len(v3),len(v4))
+        bar = Bar(u"APP容量对比(MB)", title_pos='center', width=1200, height=600)
+        bar.use_theme('dark')
+        bar.add(u"未集成SDK的IPA", self.matched_models, v1, legend_top='bottom', is_label_show=True)
+        # bar.add(u"未集成SDK时总功耗", self.analyzer.get_models(), v1, legend_top='bottom', is_label_show=True, is_datazoom_show=True)
+        bar.add(u"集成SDK的IPA", self.matched_models, v2, legend_top='bottom', is_label_show=True)
+        bar.add(u"未集成SDK的APP安装大小", self.matched_models, v3, legend_top='bottom', is_label_show=True)
+        bar.add(u"集成SDK的APP安装大小", self.matched_models, v4, legend_top='bottom', is_label_show=True)
+        bar.render(os.path.join(REPORTS_DIR, 'app_occupation.html'))
 
     def create_pie(self, vs, index, model, test_type):
         attr = [self.analyzer.get_app_label(), u'其它']
@@ -383,35 +371,20 @@ class AppPerfDrawer(object):
             page.add_chart(pie3)
         page.render(os.path.join(REPORTS_DIR, 'power_usage_percent_{0}.html').format(test_type))
 
+    def draw_launchtime_first_bar2(self, v1, v2):
+        print(len(v1), len(v2))
+        bar = Bar(u"APP首次启动时间(ms)", title_pos='center', width=1000, height=450)
+        bar.add(u"未集成SDK", self.matched_models, v1, legend_top='bottom', is_label_show=True)
+        # bar.add(u"未集成SDK时总功耗", self.analyzer.get_models(), v1, legend_top='bottom', is_label_show=True, is_datazoom_show=True)
+        bar.add(u"集成SDK", self.matched_models, v2, legend_top='bottom', is_label_show=True)
+        bar.render(os.path.join(REPORTS_DIR, 'everisk_launch_first.html'))
 
-if __name__ == '__main__':
-    analyzer = DataAnalyzer()
-    drawer = AppPerfDrawer(analyzer)
-    drawer.draw_lines_per_models()
-    drawer.draw_summary_bars_per_scenarioes()
-    # 顺序按照self.analyzer.get_models()
-    # print(self.analyzer.get_models())
-    '''1102.3, 1823.1, 1384.5 
-1115.3, 1968.1, 1385.0 
-1118.2, 1973.0, 1388.5 
-1135.4, 2142.2, 1423.9 
-1174.0, 2390.9, 1452.5 
-0.50, 6.20, 2.50 
-10.70, 384.30, 47.20 '''
-    clean_power_usage = [1102.3, 1823.1, 1384.5]
-    installation_power_usage_0 = [1115.3, 1968.1, 1385.0]
-    installation_power_usage_1 = [1118.2, 1973.0, 1388.5]
-    runtime_power_usage_0 = [1135.4, 2142.2, 1423.9]
-    runtime_power_usage_1 = [1174.0, 2390.9, 1452.5]
-    app_power_usage_0 = [0.50, 6.20, 2.50]
-    app_power_usage_1 = [10.70, 384.30, 47.20]
-    drawer.draw_silent_power_usage_bar(clean_power_usage, installation_power_usage_0, installation_power_usage_1)
-    drawer.draw_active_power_usage_bar(runtime_power_usage_0, runtime_power_usage_1, app_power_usage_0,
-                                       app_power_usage_1)
-    drawer.draw_power_usage_percent_pie(0, (
-        app_power_usage_0,
-        np.round(np.array(runtime_power_usage_0) - np.array(app_power_usage_0), decimals=2).tolist()))
-    drawer.draw_power_usage_percent_pie(1, (
-        app_power_usage_1,
-        np.round(np.array(runtime_power_usage_1) - np.array(app_power_usage_1), decimals=2).tolist()))
-    print('Done!')
+    def draw_launchtime_secondary_bar2(self, v1, v2):
+        print(len(v1), len(v2))
+        bar = Bar(u"APP再次启动时间(ms)", title_pos='center', width=1000, height=450)
+        bar.add(u"未集成SDK", self.matched_models, v1, legend_top='bottom', is_label_show=True)
+        # bar.add(u"未集成SDK时总功耗", self.analyzer.get_models(), v1, legend_top='bottom', is_label_show=True, is_datazoom_show=True)
+        bar.add(u"集成SDK", self.matched_models, v2, legend_top='bottom', is_label_show=True)
+        bar.render(os.path.join(REPORTS_DIR, 'everisk_launch_secondary.html'))
+
+

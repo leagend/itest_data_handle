@@ -1,48 +1,18 @@
 datasets:
-  MX4:
+  MI5:
     starttime_first:
-      original: [1, 2, 3, 4, 5]
-      integrated: [1, 2, 3, 4, 5]
-    starttime_second:
-      original: [1, 2, 3, 4, 5]
-      integrated: [1, 2, 3, 4, 5]
-    polling_10min:
-      original: [1, 2, 3, 4, 5]
-      integrated: [1, 2, 3, 4, 5]
-    polling_1hour:
-      original: [1, 2, 3]
-      integrated: [1, 2, 3]
+      original: [2, 3, 4, 5, 6]
+      integrated: [2, 3, 4, 5, 6]
   N9100:
     starttime_first:
-      original: [1, 2, 3, 4, 5]
-      integrated: [1, 2, 3, 4, 5]
-    starttime_second:
-      original: [1, 2, 3, 4, 5]
-      integrated: [1, 2, 3, 4, 5]
-    polling_10min:
-      original: [1, 2, 3, 4, 5]
-      integrated: [1, 2, 3, 4, 5]
-    polling_1hour:
-      original: [1, 2, 3]
-      integrated: [1, 2, 3]
-  HUAWEI:
+      original: [2, 3, 4, 5, 6]
+      integrated: [2, 3, 4, 5, 6]
+  TCLM2M:
     starttime_first:
-      original: [1, 2, 3, 4, 5]
-      integrated: [1, 2, 3, 4, 5]
-    starttime_second:
-      original: [1, 2, 3, 4, 5]
-      integrated: [1, 2, 3, 4, 5]
-    polling_10min:
-      original: [1, 2, 3, 4, 5]
-      integrated: [1, 2, 3, 4, 5]
-    polling_1hour:
-      original: [1, 2, 3]
-      integrated: [1, 2, 3]
+      original: [2, 3, 4, 5, 6]
+      integrated: [2, 3, 4, 5, 6]
 duration:
-  starttime_first: 120
-  starttime_second: 119
-  polling_10min: 390
-  polling_1hour: 3405
+  starttime_first: 150
 counters:
   - totalcpu
   - totalpss
@@ -50,13 +20,13 @@ counters:
   - totaldownflow
 model_sequence:
   - N9100
-  - HUAWEI
-  - MX4
+  - TCLM2M
+  - MI5
 execution_info:
   header_text: 'time,sysmemleft,syscpu,totalpss,totalcpu,totalupflow,totaldownflow,totalbattery,batterleft,cputemp,fps'
-  package_name: 'com.sgcc.evs.echarge'
-  activity_name: 'com.bitrice.evclub.ui.activity.WelcomeActivity'
-  app_label: E充电
+  package_name: 'com.bangcletest.everiskdemo'
+  activity_name: '.MainActivity'
+  app_label: 'Everisk Demo'
 test_types:
   - original
   - integrated

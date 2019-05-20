@@ -1,0 +1,55 @@
+datasets:
+  E-Charge:
+    launchtime_initial:
+      original: [1, 2, 3, 4]
+      integrated: [1, 2, 3, 4]
+    launchtime_secondary:
+      original: [1, 2, 3]
+      integrated: [1, 2, 3, 4]
+    polling:
+      original: [1, 2, 3]
+      integrated: [1, 2, 3]
+duration:
+  launchtime_initial: 170
+  launchtime_secondary: 170
+  polling: 570
+counters:
+  - cpu
+  - memory
+  - upflow
+  - downflow
+model_sequence:
+  - E-Charge
+execution_info:
+  header_text: 'time, cpu, memory, downflow, upflow'
+  apps:
+  - bundleid: 'com.shen.UPB30'
+    display_name: 'E充电'
+test_types:
+  - original
+  - integrated
+phases:
+  - 1st_min
+  - rest
+  - whole
+radar_schema:
+  cpu: 10
+  meomry: 350
+  upflow: 300
+  downflow: 60
+  launchtime: 1
+translations:
+  1st_min: 第一分钟
+  rest: 一分钟后
+  whole: 全过程
+  cpu: CPU利用率(%)
+  memory: 内存使用值(MB)
+  upflow: 上行流量(KB)
+  downflow: 下行流量(KB)
+  launchtime: 启动时间(s)
+  launch: 启动时间
+  launchtime_initial: 首次启动
+  launchtime_secondary: 再次启动
+  polling: 运行巡检测试
+  original: 未集成SDK
+  integrated: 集成SDK

@@ -338,10 +338,10 @@ class AppPerfDrawer(object):
     def draw_occupation_bar(self, v1, v2, v3, v4):
         # print(len(v1), len(v2),len(v3),len(v4))
         bar = Bar(u"APP容量对比(MB)", title_pos='center', width=1200, height=600)
-        bar.use_theme('dark')
-        bar.add(u"未集成SDK的IPA", self.matched_models, v1, legend_top='bottom', is_label_show=True)
+        bar.use_theme('shine')
+        bar.add(u"未集成SDK的{0}".format(self.analyzer.type), self.matched_models, v1, legend_top='bottom', is_label_show=True)
         # bar.add(u"未集成SDK时总功耗", self.analyzer.get_models(), v1, legend_top='bottom', is_label_show=True, is_datazoom_show=True)
-        bar.add(u"集成SDK的IPA", self.matched_models, v2, legend_top='bottom', is_label_show=True)
+        bar.add(u"集成SDK的{0}".format(self.analyzer.type), self.matched_models, v2, legend_top='bottom', is_label_show=True)
         bar.add(u"未集成SDK的APP安装大小", self.matched_models, v3, legend_top='bottom', is_label_show=True)
         bar.add(u"集成SDK的APP安装大小", self.matched_models, v4, legend_top='bottom', is_label_show=True)
         bar.render(os.path.join(REPORTS_DIR, 'app_occupation.html'))

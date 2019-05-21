@@ -59,11 +59,9 @@ def read_time_from_logcat(folder, package_name, activity_name):
 
 
 class AndroidDataAnalyzer(DataAnalyzer):
-    # def __init__(self, config_file=DATASETS_YML):
-    #     self.datasets_map = yaml.load(open(config_file))
-    #     self.summary_values = {}
-    #     if not os.path.isdir(REPORTS_DIR):
-    #         os.mkdir(REPORTS_DIR)
+    def __init__(self, config_file):
+        super(AndroidDataAnalyzer, self).__init__(config_file)
+        self.type = 'APK'
 
     def get_launch_time(self, folders, package_name, activity_name):
         starttimes = []

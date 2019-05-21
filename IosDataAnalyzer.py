@@ -35,6 +35,10 @@ def read_csv_files(header_text, files_list):
 
 
 class IosDataAnalyzer(DataAnalyzer):
+    def __init__(self, config_file):
+        super(IosDataAnalyzer, self).__init__(config_file)
+        self.type = 'IPA'
+
     def get_launch_time(self, folders, package_name, activity_name):
         with open(os.path.join(os.path.dirname(folders[0]), 'starttime.csv')) as file:
             string_groups = file.readline().replace(' ', '').split(',')
